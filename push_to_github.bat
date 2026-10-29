@@ -20,8 +20,17 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-:: Navigate to script directory
+:: Navigate to script or project directory
 cd /d "%~dp0"
+if not exist ".git" (
+    if exist "%~dp0subscription-expense-optimizer\.git" (
+        cd /d "%~dp0subscription-expense-optimizer"
+    ) else if exist "%USERPROFILE%\OneDrive\Desktop\subscription-expense-optimizer\.git" (
+        cd /d "%USERPROFILE%\OneDrive\Desktop\subscription-expense-optimizer"
+    ) else if exist "C:\Users\sargu\.gemini\antigravity\scratch\subscription-expense-optimizer\.git" (
+        cd /d "C:\Users\sargu\.gemini\antigravity\scratch\subscription-expense-optimizer"
+    )
+)
 
 echo [1/4] Checking Git repository status...
 if not exist ".git" (
