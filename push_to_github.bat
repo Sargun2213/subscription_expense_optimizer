@@ -1,26 +1,11 @@
 @echo off
 setlocal enabledelayedexpansion
-title Push SubOptima to GitHub
-
-echo ======================================================================
-echo          SUBSCRIPTION EXPENSE OPTIMIZER - GITHUB PUSH TOOL
-echo ======================================================================
-echo.
+title Push to GitHub - One Click
 
 :: Ensure MinGit or standard Git is in PATH
 set "PATH=%LOCALAPPDATA%\Programs\MinGit\cmd;C:\Program Files\Git\cmd;C:\Program Files\Git\bin;%PATH%"
 
-:: Verify Git is available
-where git >nul 2>nul
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Git was not found in your system PATH.
-    echo Please ensure Git is installed.
-    echo.
-    pause
-    exit /b 1
-)
-
-:: Navigate to script or project directory
+:: Navigate to project directory
 cd /d "%~dp0"
 if not exist ".git" (
     if exist "%~dp0subscription-expense-optimizer\.git" (
@@ -32,86 +17,77 @@ if not exist ".git" (
     )
 )
 
-echo [1/4] Checking Git repository status...
-if not exist ".git" (
-    echo Initializing new Git repository...
-    git init
-    git branch -M main
+echo ======================================================================
+echo              ONE-CLICK PUSH TO GITHUB
+echo ======================================================================
+echo.
+
+:: Check if repository URL is already saved in github_repo.txt
+set "REPO_URL="
+if exist "github_repo.txt" (
+    set /p REPO_URL=<"github_repo.txt"
 )
 
-:: Check for existing remote origin
-set "CURRENT_REMOTE="
-for /f "tokens=*" %%a in ('git remote get-url origin 2^>nul') do set "CURRENT_REMOTE=%%a"
-
-echo.
-if defined CURRENT_REMOTE (
-    echo Current GitHub Remote: !CURRENT_REMOTE!
-    echo.
-    echo Options:
-    echo   1. Press [ENTER] to push to this repository
-    echo   2. Or paste a NEW GitHub URL to change the destination
-    echo.
-    set /p NEW_URL="Choose [ENTER to keep / Paste new URL]: "
-    if not "!NEW_URL!"=="" (
-        git remote remove origin 2>nul
-        git remote add origin !NEW_URL!
-        echo Updated remote origin to: !NEW_URL!
-    )
-) else (
-    echo No GitHub remote detected for this project yet.
-    echo.
-    echo Please create an empty repository at: https://github.com/new
-    echo.
-    set /p NEW_URL="Paste your GitHub repository URL (e.g., https://github.com/your-username/your-repo.git): "
-    if "!NEW_URL!"=="" (
-        echo [ERROR] No GitHub URL provided. Aborting push.
-        echo.
-        pause
-        exit /b 1
-    )
-    git remote add origin !NEW_URL!
-    echo Remote origin set to: !NEW_URL!
+:: If not saved, check git remote origin
+if "!REPO_URL!"=="" (
+    for /f "tokens=*" %%a in ('git remote get-url origin 2^>nul') do set "REPO_URL=%%a"
 )
 
-echo.
-echo [2/4] Staging all files...
-git add .
-
-echo.
-echo [3/4] Committing changes...
-set /p COMMIT_MSG="Enter commit message (Press ENTER for default: 'Update Subscription Platform'): "
-if "!COMMIT_MSG!"=="" set "COMMIT_MSG=Update Subscription Platform"
-
-git commit -m "!COMMIT_MSG!" >nul 2>nul
-if %ERRORLEVEL% EQU 0 (
-    echo Changes committed successfully: "!COMMIT_MSG!"
-) else (
-    echo Working tree already clean or commit created.
+:: If still empty, prompt via Windows graphical popup or console
+if "!REPO_URL!"=="" (
+    echo Opening prompt for your GitHub repository URL...
+    for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command "Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.Interaction]::InputBox('Enter or paste your GitHub repository URL (e.g. https://github.com/username/repo.git):', 'Connect GitHub Repository', [System.Windows.Forms.Clipboard]::GetText())"`) do set "REPO_URL=%%I"
 )
 
-:: Ensure branch name is main
+:: If user cancelled or left empty, prompt in console
+if "!REPO_URL!"=="" (
+    echo.
+    set /p REPO_URL="Enter your GitHub repository URL: "
+)
+
+if "!REPO_URL!"=="" (
+    echo [ERROR] No GitHub URL provided. Aborting.
+    pause
+    exit /b 1
+)
+
+:: Clean and save the URL for future instant one-click pushes
+echo !REPO_URL!> "github_repo.txt"
+
+echo Target Repository: !REPO_URL!
+echo.
+
+:: Ensure origin is configured
+git remote remove origin 2>nul
+git remote add origin !REPO_URL!
 git branch -M main
 
-echo.
-echo [4/4] Pushing to GitHub (branch: main)...
+echo [1/3] Staging all files...
+git add -A
+
+echo [2/3] Creating commit...
+git commit -m "feat: sync all project files to github" >nul 2>nul
+
+echo [3/3] Pushing to GitHub main branch...
 echo.
 git push -u origin main
 
 if %ERRORLEVEL% EQU 0 (
     echo.
     echo ======================================================================
-    echo  [SUCCESS] All files have been successfully pushed to GitHub!
+    echo   SUCCESS! All files are now live on GitHub!
+    echo   Repository: !REPO_URL!
     echo ======================================================================
     echo.
+    echo Future pushes: Just double-click this file to instantly sync changes!
 ) else (
     echo.
     echo ======================================================================
-    echo  [PUSH FAILED]
+    echo   Push encountered an error.
     echo ======================================================================
-    echo Common reasons:
-    echo  1. You may need to sign in to GitHub in the prompt window.
-    echo  2. If using GitHub Personal Access Token (PAT), paste it as password.
-    echo  3. The repository URL might be misspelled or does not exist.
+    echo If GitHub asks for authentication:
+    echo 1. Browser Login: Follow the browser sign-in prompt if it opens.
+    echo 2. Personal Access Token: Use your GitHub username and Personal Access Token (PAT) as password.
     echo.
 )
 
