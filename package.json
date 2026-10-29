@@ -1,0 +1,22 @@
+{
+  "name": "subscription-expense-optimization-platform",
+  "version": "1.0.0",
+  "description": "Subscription Expense Optimization Platform - Know what you pay. Discover what you waste. Take control of your subscriptions.",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "seed": "npm run prisma:seed --prefix backend",
+    "test": "npm test --prefix backend",
+    "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "backend": "npm run dev --prefix backend",
+    "frontend": "npm run dev --prefix frontend"
+  },
+  "keywords": [
+    "subscription-tracker",
+    "expense-optimizer",
+    "finance",
+    "saas"
+  ],
+  "author": "Subscription Expense Optimization Team",
+  "license": "MIT"
+}

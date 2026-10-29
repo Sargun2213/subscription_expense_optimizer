@@ -1,0 +1,101 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                String                 @id @default(uuid())
+  email             String                 @unique
+  passwordHash      String
+  name              String
+  preferredCurrency String                 @default("USD")
+  timezone          String                 @default("UTC")
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  subscriptions     Subscription[]
+  recommendations   SavingsRecommendation[]
+  scenarios         SavingsScenario[]
+  preferences       UserPreference?
+
+  @@index([email])
+}
+
+model UserPreference {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailNotifications Boolean  @default(true)
+  renewalAlertDays   Int      @default(3)
+  weeklyDigest       Boolean  @default(false)
+  theme              String   @default("light")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Subscription {
+  id               String                 @id @default(uuid())
+  userId           String
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name             String
+  category         String                 @default("General")
+  costAmount       Float                  // Stored in standard currency units (e.g. 14.99)
+  currency         String                 @default("USD")
+  billingFrequency String                 // WEEKLY, MONTHLY, QUARTERLY, HALF_YEARLY, YEARLY
+  billingStartDate DateTime
+  nextBillingDate  DateTime
+  status           String                 @default("ACTIVE") // ACTIVE, PAUSED, CANCELLED, PENDING_CANCELLATION
+  paymentMethod    String?
+  notes            String?
+  usageAssessment  String                 @default("ACTIVE") // ACTIVE, MODERATE, LOW, UNUSED
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  recommendations  SavingsRecommendation[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([category])
+  @@index([nextBillingDate])
+}
+
+model SavingsRecommendation {
+  id                      String        @id @default(uuid())
+  userId                  String
+  user                    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptionId          String?
+  subscription            Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  type                    String        // UNUSED_SERVICE, OVERLAPPING_SERVICE, HIGH_COST_REVIEW, RENEWAL_SOON, DUPLICATE_SERVICE
+  title                   String
+  description             String
+  suggestedAction         String
+  estimatedMonthlySavings Float
+  estimatedAnnualSavings  Float
+  assumptions             String
+  isReviewed              Boolean       @default(false)
+  isDismissed             Boolean       @default(false)
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([subscriptionId])
+}
+
+model SavingsScenario {
+  id                      String   @id @default(uuid())
+  userId                  String
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                    String
+  description             String?
+  selectedSubscriptionIds String   // Comma-separated or JSON list of subscription IDs targeted
+  projectedMonthlySavings Float
+  projectedAnnualSavings  Float
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@index([userId])
+}

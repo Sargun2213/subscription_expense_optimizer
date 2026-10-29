@@ -1,0 +1,60 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  test-and-build:
+    name: Build & Test (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Generate Prisma Client & Sync Database
+        working-directory: backend
+        env:
+          DATABASE_URL: "file:./dev.db"
+        run: |
+          npx prisma generate
+          npx prisma db push
+
+      - name: Run Backend Unit & Integration Tests
+        working-directory: backend
+        env:
+          DATABASE_URL: "file:./dev.db"
+          JWT_SECRET: "test-secret-key-for-github-actions-ci-12345"
+        run: npm test
+
+      - name: Build Backend Output
+        working-directory: backend
+        run: npm run build
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build Frontend Application
+        working-directory: frontend
+        run: npm run build
